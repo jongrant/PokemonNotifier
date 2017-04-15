@@ -1,5 +1,5 @@
-// server.js
-// where your node app starts
+// checker.js
+// checks the Twitter stream
 
 const twitterAccount = 'londonpogomap';
 
@@ -18,17 +18,20 @@ var twitterClient = new Twitter({
   access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
 });
 
-var store = new Storage('storage.json');
-
-var seen = store.get('seen');
-if (!seen) seen = [];
-
-var users = store.get('users');
-if (!users) users = [];
-
-console.log(`Loaded ${users.length} users`);
-
 function checkForPokemon() {
+  var store = new Storage(process.env.STORAGE_FILE);
+
+  var seen = store.get('seen');
+  if (!seen) seen = [];
+
+  var users = store.get('users');
+  if (!users) {
+    console.log("No users found.");
+    return;
+  }
+  console.log(`Loaded ${users.length} users`);
+  
+  console.log("Performing check...");
   getTweets(twitterAccount, function(error, tweets, response) {
     if (error) {
       console.log(error);
@@ -105,7 +108,7 @@ function checkForPokemon() {
       store.put('seen', seen);
     }
     
-    console.log(`Already seen ${seenCount} of them`);
+    if (seenCount > 0) console.log(`Already seen ${seenCount} of them`);
   });
 }
 
@@ -131,7 +134,7 @@ function getGoogleUrlCoordinate(href) {
 
 function start() {
   // start checking
-  // checkForPokemon();
+  //checkForPokemon();
   setInterval(checkForPokemon, 60000);
   console.log("Started periodic checking");
 }

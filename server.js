@@ -1,11 +1,9 @@
 // server.js
-// where your node app starts
+// runs the web API
 
 // init project
 const express = require('express');
 const Storage = require('node-storage');
-
-var store = new Storage('storage.json');
 
 // set up a web endpoint to listen for messages
 var app = express();
@@ -16,6 +14,7 @@ app.get('/user/get', function (req, res) {
     return;
   }
   
+  var store = new Storage(process.env.STORAGE_FILE);
   var users = store.get('users');
   
   for (var j = 0; j < users.length; j++) {
@@ -30,12 +29,43 @@ app.get('/user/get', function (req, res) {
   return;
 });
 
+app.get('/notify/set', function (req, res) {
+  if (!req.query.user) {
+    res.status(400).send('Missing parameter: user');
+    return;
+  }
+  
+  if (!req.query.notifyUrl) {
+    res.status(400).send('Missing parameter: notifyUrl');
+    return;
+  }
+  
+  var store = new Storage(process.env.STORAGE_FILE);
+  var users = store.get('users');
+  
+  for (var j = 0; j < users.length; j++) {
+    if (users[j].userName == req.query.user) {
+      users[j].notifyUrl = req.query.notifyUrl;
+      
+      store.put('users', users);
+      
+      res.status(200).send('OK');
+      console.log(`Updated user ${users[j].userName} notifyUrl to ${users[j].notifyUrl}`);
+      return;
+    }
+  }
+  
+  res.status(404).send('Not found');
+  return;
+});
+
 app.get('/location/get', function (req, res) {
   if (!req.query.user) {
     res.status(400).send('Missing parameter: user');
     return;
   }
   
+  var store = new Storage(process.env.STORAGE_FILE);
   var users = store.get('users');
   
   for (var j = 0; j < users.length; j++) {
@@ -63,14 +93,16 @@ app.get('/location/set', function (req, res) {
     return;
   }
   
+  var store = new Storage(process.env.STORAGE_FILE);
   var users = store.get('users');
   
   for (var j = 0; j < users.length; j++) {
     if (users[j].userName == req.query.user) {
       users[j].location.latitude = parseFloat(req.query.latitude.trim());
       users[j].location.longitude = parseFloat(req.query.longitude.trim());
-      res.status(200).send('OK');
+      store.put('users', users);
       
+      res.status(200).send('OK');
       console.log(`Updated user ${users[j].userName} location to ${users[j].location.latitude},${users[j].location.longitude}`);
       return;
     }

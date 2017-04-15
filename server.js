@@ -3,7 +3,8 @@
 
 // init project
 const express = require('express');
-const Storage = require('node-storage');
+const db = require('diskdb'); 
+  db.connect('.data/', ['users']);
 
 // set up a web endpoint to listen for messages
 var app = express();
@@ -14,22 +15,17 @@ app.get('/user/get', function (req, res) {
     return;
   }
   
-  var store = new Storage(process.env.STORAGE_FILE);
-  var users = store.get('users');
+  var user = db.users.findOne({ userName: req.query.user });
   
-  for (var j = 0; j < users.length; j++) {
-    var user = users[j];
-    if (user.userName == req.query.user) {
-      res.status(200).send(user);
-      return;
-    }
+  if (user != null) {
+    res.status(200).send(user);
   }
-  
-  res.status(404).send('Not found');
-  return;
+  else {
+    res.status(404).send('Not found');
+  }
 });
 
-app.get('/notify/set', function (req, res) {
+app.get('/user/register', function (req, res) {
   if (!req.query.user) {
     res.status(400).send('Missing parameter: user');
     return;
@@ -40,19 +36,42 @@ app.get('/notify/set', function (req, res) {
     return;
   }
   
-  var store = new Storage(process.env.STORAGE_FILE);
-  var users = store.get('users');
+  var user = db.users.findOne({ userName: req.query.user });
   
-  for (var j = 0; j < users.length; j++) {
-    if (users[j].userName == req.query.user) {
-      users[j].notifyUrl = req.query.notifyUrl;
-      
-      store.put('users', users);
-      
-      res.status(200).send('OK');
-      console.log(`Updated user ${users[j].userName} notifyUrl to ${users[j].notifyUrl}`);
-      return;
-    }
+  if (user == null) {
+    user = { userName: req.query.user, range: 1500, notifyUrl: req.query.notifyUrl };
+    db.users.save(user);
+    
+    res.status(200).send("OK");
+    console.log(`Registered user ${user.userName}, notifyUrl ${user.notifyUrl}`);
+  }
+  else {
+    res.status(400).send('User exists');
+  }
+});
+
+app.get('/notify/set', function (req, res) {
+  if (!req.query.user) {
+    res.status(400).send('Missing parameter: user');
+    return;
+  }
+  
+  if (!req.query.notifyUrl && !req.query.notifySms) {
+    res.status(400).send('Missing parameter: notifyUrl or notifySms');
+    return;
+  }
+  
+  var query = { userName: req.query.user };
+  var user = db.users.findOne(query);
+  
+  if (user != null) {
+    user.notifySms = req.query.notifySms;
+    user.notifyUrl = req.query.notifyUrl;
+    db.users.update(query, user, { multi: false, upsert: false });
+
+    res.status(200).send('OK');
+    console.log(`Updated user ${user.userName}: notifyUrl = ${user.notifyUrl}, notifySms = ${user.notifySms}`);
+    return;    
   }
   
   res.status(404).send('Not found');
@@ -65,15 +84,13 @@ app.get('/location/get', function (req, res) {
     return;
   }
   
-  var store = new Storage(process.env.STORAGE_FILE);
-  var users = store.get('users');
+  var user = db.users.findOne({ userName: req.query.user });
   
-  for (var j = 0; j < users.length; j++) {
-    var user = users[j];
-    if (user.userName == req.query.user) {
-      res.status(200).send(user.location);
-      return;
-    }
+  if (user != null) {
+    res.status(200).send(user.location); 
+  }
+  else {
+    res.status(404).send('Not found');
   }
 });
 
@@ -93,20 +110,21 @@ app.get('/location/set', function (req, res) {
     return;
   }
   
-  var store = new Storage(process.env.STORAGE_FILE);
-  var users = store.get('users');
+  var query = { userName: req.query.user };
+  var user = db.users.findOne(query);
   
-  for (var j = 0; j < users.length; j++) {
-    if (users[j].userName == req.query.user) {
-      users[j].location.latitude = parseFloat(req.query.latitude.trim());
-      users[j].location.longitude = parseFloat(req.query.longitude.trim());
-      store.put('users', users);
-      
-      res.status(200).send('OK');
-      console.log(`Updated user ${users[j].userName} location to ${users[j].location.latitude},${users[j].location.longitude}`);
-      return;
-    }
+  if (user != null) {
+    user.location.latitude = parseFloat(req.query.latitude.trim());
+    user.location.longitude = parseFloat(req.query.longitude.trim());
+    db.users.update(query, user, { multi: false, upsert: false });
+
+    res.status(200).send('OK');
+    console.log(`Updated user ${user.userName} location to ${user.location.latitude}, ${user.location.longitude}`);
+    return;
   }
+  
+  res.status(404).send('Not found');
+  return;
 });
 
 function start() {

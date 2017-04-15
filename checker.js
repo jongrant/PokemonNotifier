@@ -7,8 +7,11 @@ const twitterAccount = 'londonpogomap';
 const Twitter = require('twitter');
 const geolib = require('geolib');
 const request = require('request');
-const Storage = require('node-storage');
-const moment = require('moment'); moment.locale('en-GB');
+const sms = require('node-fastsms');
+const db = require('diskdb'); 
+  db.connect('.data/', ['users', 'seen']);
+const moment = require('moment'); 
+  moment.locale('en-GB');
 const url = require('url');
 
 var twitterClient = new Twitter({
@@ -18,19 +21,17 @@ var twitterClient = new Twitter({
   access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
 });
 
+// db.seen.remove();
+// sms.sendOne("447872023503", "Test message", "Pokemon Go");
+
 function checkForPokemon() {
-  var store = new Storage(process.env.STORAGE_FILE);
-
-  var seen = store.get('seen');
-  if (!seen) seen = [];
-
-  var users = store.get('users');
-  if (!users) {
+  var users = db.users.find();
+  if (users.length == 0) {
     console.log("No users found.");
     return;
   }
   console.log(`Loaded ${users.length} users`);
-  
+
   console.log("Performing check...");
   getTweets(twitterAccount, function(error, tweets, response) {
     if (error) {
@@ -45,7 +46,7 @@ function checkForPokemon() {
       var tweet = tweets[i];
       
       // don't reparse any tweet we already looked at
-      if (seen.includes(tweet.id)) {
+      if (db.seen.findOne({ tweet_id: tweet.id })) {
         seenCount++;
         continue;
       }
@@ -57,18 +58,6 @@ function checkForPokemon() {
       var tweetText = tweet.text.replace(/https?:[^ ]+/ig, '').replace(/\[.+\]/ig, '').replace(/ +/ig, ' ').trim();
       
       console.log(tweetText);
-      
-      /*
-      var expiryString = tweet.text.match(/until (\d\d:\d\d:\d\d[AP]M)/i);
-      if (expiryString != null && expiryString.length > 1) {
-        var expiry = moment(expiryString[1], 'hh:mm:ssA');
-        
-        if (expiry.isAfter()) {
-          console.log(`Tweet has expired: ${tweetText}`);
-          continue;
-        }
-      }
-      */
       
       for (var j = 0; j < users.length; j++) {
         var user = users[j];
@@ -89,8 +78,13 @@ function checkForPokemon() {
           continue;
         }
 
-        if (user.notifyUrl) {
-          console.log(`  Notifying user ${user.userName}: ${messageText}`);
+        if (user.notifySms) {
+          console.log(`  Notifying user ${user.userName} via SMS: ${messageText}`);
+
+          sms.sendOne(user.notifySms, messageText, process.env.SMS_FROM);
+        }
+        else if (user.notifyUrl) {
+          console.log(`  Notifying user ${user.userName} via HTTP: ${messageText}`);
 
           request({
             url: user.notifyUrl,
@@ -101,11 +95,7 @@ function checkForPokemon() {
       }
       
       // add the tweet to the "already seen" list
-      seen.push(tweet.id);
-      // remove any excess, as we only need to know the same as the number of tweets we are returned
-      while (seen.length > tweets.length) seen.shift();
-      // save it to the storage for persistence
-      store.put('seen', seen);
+      db.seen.save({ tweet_id: tweet.id });
     }
     
     if (seenCount > 0) console.log(`Already seen ${seenCount} of them`);
@@ -133,10 +123,11 @@ function getGoogleUrlCoordinate(href) {
 }
 
 function start() {
-  // start checking
-  //checkForPokemon();
+  // start checking  
   setInterval(checkForPokemon, 60000);
   console.log("Started periodic checking");
+  
+  checkForPokemon();
 }
 
 module.exports = start;

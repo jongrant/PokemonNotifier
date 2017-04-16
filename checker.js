@@ -22,12 +22,16 @@ var twitterClient = new Twitter({
 });
 
 function checkForPokemon() {
+  console.log(`-- ${moment()}`);
+
   var users = db.users.find();
   if (users.length == 0) {
     console.log("No users found.");
     return;
   }
   console.log(`Loaded ${users.length} users`);
+
+  purgeSeen();
 
   console.log("Performing check...");
   getTweets(twitterAccount, function(error, tweets, response) {
@@ -132,9 +136,11 @@ function notifyUser(user, message) {
 
 function rememberSeen(tweet) {
   // add the tweet to the "already seen" list
-  var createdAt = moment(tweet.created_at, "ddd MMM D hh:mm:ss ZZ YYYY");
-  db.seen.save({ tweet_id: tweet.id, timestamp: createdAt });
+  var created = moment(tweet.created_at, "ddd MMM D hh:mm:ss ZZ YYYY");
+  db.seen.save({ tweet_id: tweet.id, timestamp: created });
+}
 
+function purgeSeen() {
   // remove tweets that have expired
   var all = db.seen.find();
   console.log(`Cache size is ${all.length}, pruning...`);
@@ -144,7 +150,8 @@ function rememberSeen(tweet) {
   for (var k = 0; k < all.length; k++) {
     var diff = now.diff(all[k].timestamp);
     if (diff > 3600000) {
-      console.log(`  Removing tweet ID ${all[k].tweet_id}, diff = ${diff}`);
+      var diffFormat = moment.duration(-diff).humanize(true);
+      console.log(`  Removing tweet ID ${all[k].tweet_id}, created ${diffFormat}`);
       db.seen.remove({ tweet_id: all[k].tweet_id });
       count++;
     }
@@ -158,7 +165,7 @@ function start() {
   setInterval(checkForPokemon, 60000);
   console.log("Started periodic checking");
   
-  checkForPokemon();
+  // checkForPokemon();
 }
 
 module.exports = start;

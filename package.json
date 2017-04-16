@@ -1,0 +1,31 @@
+{
+  "name": "pogo-notifier",
+  "version": "0.0.1",
+  "description": "Monitors for Pokemon spawns nearby and alerts users.",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.17.1",
+    "diskdb": "^0.1.17",
+    "dotenv": "^0.5.1",
+    "express": "^4.15.2",
+    "geolib": "^2.0.22",
+    "moment": "^2.18.1",
+    "node-fastsms": "^0.1.2",
+    "twitter": "^1.7.0"
+  },
+  "engines": {
+    "node": "6.10.x"
+  },
+  "repository": {
+    "url": "https://glitch.com/edit/#!/welcome-project"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "express"
+  ]
+}

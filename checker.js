@@ -88,7 +88,7 @@ function checkForPokemon() {
       }
     }
     
-    if (seenCount > 0) console.log(`Already seen ${seenCount} of them`);
+    if (seenCount > 0) console.log(`Already seen ${seenCount} of the ${tweets.length} tweets`);
   });
 }
 
@@ -137,20 +137,20 @@ function rememberSeen(tweet) {
 
   // remove tweets that have expired
   var all = db.seen.find();
-  console.log(`Seen cache size = ${all.length}, pruning...`);
+  console.log(`Cache size is ${all.length}, pruning...`);
 
   var now = moment();
   var count = 0;
   for (var k = 0; k < all.length; k++) {
     var diff = now.diff(all[k].timestamp);
     if (diff > 3600000) {
-      console.log(`Removing tweet ID ${all[k].tweet_id}, diff = ${diff}`);
+      console.log(`  Removing tweet ID ${all[k].tweet_id}, diff = ${diff}`);
       db.seen.remove({ tweet_id: all[k].tweet_id });
       count++;
     }
   }
   
-  console.log(`Removed ${count} cache entries`);
+  console.log(`  Removed ${count} cache entries`);
 }
 
 function start() {

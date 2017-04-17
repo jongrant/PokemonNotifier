@@ -136,6 +136,91 @@ app.put('/user/:user/location', function (req, res) {
   }
 });
 
+app.get('/user/:user/ignore', function (req, res) {
+  if (!req.params.user) {
+    res.status(400).send('Missing parameter: user');
+    return;
+  }
+  
+  var user = db.users.findOne({ userName: req.params.user });
+  
+  if (user != null) {
+    if (!user.ignore) user.ignore = [];
+    res.status(200).json(user.ignore); 
+  }
+  else {
+    res.status(404).send('Not found');
+  }
+});
+
+app.get('/user/:user/ignore/:name', function (req, res) {
+  if (!req.params.user) {
+    res.status(400).send('Missing parameter: user');
+    return;
+  }
+
+  if (!req.params.name) {
+    res.status(400).send('Missing parameter: name');
+    return;
+  }
+  
+  var user = db.users.findOne({ userName: req.params.user });
+  var name = req.params.name.toLowerCase();
+  
+  if (user != null) {
+    if (!user.ignore) user.ignore = [];
+
+    var isIgnored = user.ignore.includes(name);
+    res.status(200).json({ value: isIgnored ? 'yes' : 'no' } ); 
+  }
+  else {
+    res.status(404).send('Not found');
+  }
+});
+
+app.post('/user/:user/ignore/:name', function (req, res) {
+  if (!req.params.user) {
+    res.status(400).send('Missing parameter: user');
+    return;
+  }
+
+  if (!req.params.name) {
+    res.status(400).send('Missing parameter: name');
+    return;
+  }
+
+  if (!req.body.value) {
+    res.status(400).send('Missing parameter: value');
+    return;
+  }
+
+  if (req.body.value !== 'yes' && req.body.value !== 'no') {
+    res.status(400).send("Value must be 'yes' or 'no'");
+    return;
+  }
+  
+  var query = { userName: req.params.user };
+  var user = db.users.findOne(query);
+  var name = req.params.name.toLowerCase();
+  
+  if (user != null) {
+    if (!user.ignore) user.ignore = [];
+
+    if (req.body.value == 'no') {
+      user.ignore = user.ignore.filter(i => i !== name);
+    }
+    else if (req.body.value == 'yes') {
+      user.ignore.push(name);
+    }
+
+    res.status(200).send('OK');
+    db.users.update(query, user, { multi: false, upsert: false });
+  }
+  else {
+    res.status(404).send('Not found');
+  }
+});
+
 function start() {
   app.listen(process.env.HTTP_PORT, function () {
     console.log(`Web app listening on port ${process.env.HTTP_PORT}`);

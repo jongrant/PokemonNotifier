@@ -66,11 +66,20 @@ function checkForPokemon() {
       
       // parse out the bits we want
       var tweetText = tweet.text.replace(/https?:[^ ]+/ig, '').replace(/\[.+\]/ig, '').replace(/ +/ig, ' ').trim();
+      var pokemonName = tweetText.match(/^[a-z]+/i)[0];
       
       console.log(tweetText);
       
       for (var j = 0; j < users.length; j++) {
         var user = users[j];
+
+        if (user.ignore) {
+          var isIgnored = user.ignore.includes(pokemonName.toLowerCase());
+          if (isIgnored) {
+            console.log(`  User ${user.userName} is ignoring ${pokemonName}`);
+            continue;
+          }
+        }
         
         // work out the distance
         var dist = geolib.getDistance(user.location, coords);

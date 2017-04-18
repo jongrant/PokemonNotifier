@@ -14,7 +14,8 @@
     "geolib": "^2.0.22",
     "moment": "^2.18.1",
     "node-fastsms": "^0.1.2",
-    "twitter": "^1.7.0"
+    "twitter": "^1.7.0",
+    "colors": "^1.1.2"
   },
   "engines": {
     "node": "6.10.x"

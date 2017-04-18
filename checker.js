@@ -13,6 +13,7 @@ const db = require('diskdb');
 const moment = require('moment'); 
   moment.locale('en-GB');
 const url = require('url');
+const colors = require('colors');
 
 var twitterClient = new Twitter({
   consumer_key: process.env.TWITTER_CONSUMER_KEY,
@@ -21,8 +22,31 @@ var twitterClient = new Twitter({
   access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
 });
 
+var quiet = false;
+
+function checkQuiet() {
+  var now = moment();
+  var quietStart = moment(process.env.QUIET_START, "HH:mm");
+  var quietEnd = moment(process.env.QUIET_END, "HH:mm");
+
+  if (!now.isBetween(quietEnd, quietStart)) {
+    if (!quiet) console.log(`Entering quiet time until ${process.env.QUIET_END}`.blue.bold);
+
+    quiet = true;
+  }
+  else {
+    if (quiet) console.log(`Leaving quiet time until ${process.env.QUIET_START}`.blue.bold);
+    
+    quiet = false;
+  }
+
+  return quiet;
+}
+
 function checkForPokemon() {
-  console.log(`-- ${moment()}`);
+  if (checkQuiet()) return;
+
+  console.log(`-- ${moment()}`.cyan);
 
   var users = db.users.find();
   if (users.length == 0) {
@@ -92,7 +116,7 @@ function checkForPokemon() {
         // add our extra information plus the URL to the message
         var messageText = `${tweetText} (${distFormat} away, ${direction.exact}) ${href.href}`; 
         
-        if (dist > user.range) {
+        if (dist > process.env.MAX_RANGE) {
           console.log(`  User ${user.userName} is too far away (${distFormat})`);
           continue;
         }
@@ -127,13 +151,13 @@ function getGoogleUrlCoordinate(href) {
 
 function notifyUser(user, message) {
   if (user.notifySms) {
-    console.log(`  Notifying user ${user.userName} via SMS: ${message}`);
+    console.log(`  Notifying user ${user.userName} via SMS: ${message}`.green);
 
     sms.sendOne(user.notifySms, message, process.env.SMS_FROM);
   }
 
   if (user.notifyUrl) {
-    console.log(`  Notifying user ${user.userName} via HTTP: ${message}`);
+    console.log(`  Notifying user ${user.userName} via HTTP: ${message}`.green);
 
     request({
       url: user.notifyUrl,
@@ -152,6 +176,10 @@ function rememberSeen(tweet) {
 function purgeSeen() {
   // remove tweets that have expired
   var all = db.seen.find();
+
+  // don't bother unless the cache has a few things in it
+  if (all.length < 100) return;
+
   console.log(`Cache size is ${all.length}, pruning...`);
 
   var now = moment();

@@ -47,13 +47,9 @@ app.post('/user/:user', function (req, res) {
   if (user == null) {
     user = { 
       userName: req.body.user, 
-      range: req.body.range, 
       notifyUrl: req.body.notifyUrl, 
       notifySms: req.body.notifySms 
     };
-
-    // default this value if not specified
-    if (!user.range) user.range = 1500;
 
     db.users.save(user);
     
@@ -75,7 +71,6 @@ app.put('/user/:user', function (req, res) {
   var user = db.users.findOne(query);
   
   if (user != null) {
-    if (req.body.range) user.range = req.body.range;
     if (req.body.notifySms) user.notifySms = req.body.notifySms;
     if (req.body.notifyUrl) user.notifyUrl = req.body.notifyUrl;
     db.users.update(query, user, { multi: false, upsert: false });

@@ -29,6 +29,8 @@ function checkQuiet() {
   var quietStart = moment(process.env.QUIET_START, "HH:mm");
   var quietEnd = moment(process.env.QUIET_END, "HH:mm");
 
+  if (now.isAfter(quietEnd)) quietStart = quietStart.add(1, 'day');
+
   if (!now.isBetween(quietEnd, quietStart)) {
     if (!quiet) console.log(`Entering quiet time until ${process.env.QUIET_END}`.blue.bold);
 

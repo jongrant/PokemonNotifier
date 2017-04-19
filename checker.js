@@ -26,20 +26,16 @@ var quiet = false;
 
 function checkQuiet() {
   var now = moment();
-  var quietStart = moment(process.env.QUIET_START, "HH:mm");
-  var quietEnd = moment(process.env.QUIET_END, "HH:mm");
+  var activeStart = moment(process.env.ACTIVE_START, "HH:mm");
+  var activeEnd = moment(process.env.ACTIVE_END, "HH:mm");
 
-  if (now.isAfter(quietEnd)) quietStart = quietStart.add(1, 'day');
-
-  if (!now.isBetween(quietEnd, quietStart)) {
-    if (!quiet) console.log(`Entering quiet time until ${process.env.QUIET_END}`.blue.bold);
-
-    quiet = true;
+  if (now.isBetween(activeStart, activeEnd)) {
+    if (quiet) console.log(`Leaving quiet time until ${process.env.ACTIVE_END}`.blue.bold);
+    quiet = false;
   }
   else {
-    if (quiet) console.log(`Leaving quiet time until ${process.env.QUIET_START}`.blue.bold);
-    
-    quiet = false;
+    if (!quiet) console.log(`Entering quiet time until ${process.env.ACTIVE_START}`.blue.bold);
+    quiet = true;
   }
 
   return quiet;
